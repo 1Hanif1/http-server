@@ -47,6 +47,8 @@ def get_file_content(file_path):
 
     else:
         response = b"HTTP/1.1 404 Not Found\r\n\r\n"
+    
+    return response
 
 def handle_get_request(path, request, directory="."):
     if path == "/":
