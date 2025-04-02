@@ -77,7 +77,7 @@ def handle_client(conn, directory="."):
 
 def main():
     parser = argparse.ArgumentParser(description="Simple HTTP Server")
-    parser.add_argument("--directory", required=True, help="Directory to serve files from")
+    parser.add_argument("--directory", required=False, help="Directory to serve files from")
     args = parser.parse_args()  # Parse the command-line arguments
     
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
