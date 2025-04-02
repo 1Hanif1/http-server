@@ -85,7 +85,7 @@ def handle_post_request(path, request, directory="."):
         with open(file_path, "wb") as file:  
             file.write(body.encode())
         
-        response = build_response(200, "text/plain", "File created successfully")
+        response = b"HTTP/1.1 201 Created\r\n\r\n"
     else:
         response = b"HTTP/1.1 404 Not Found\r\n\r\n"
 
