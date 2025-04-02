@@ -13,9 +13,14 @@ def main():
         # Extract the requested file path
         request_line = request.split("\n")[0]  # First line of request
         method, path, _ = request_line.split(" ")  # Extract method and path
-
+        print(f"Method: {method}, Path: {path}")
         if(path == "/"):
             response = b"HTTP/1.1 200 OK\r\n\r\n"
+        elif(path.startswith("/echo/")):
+            string = path.split("/")[2]
+            print(f"Echoing: {string}")
+            print(string.encode())
+            response = f"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: {len(string.encode())}\r\n\r\n{string}".encode()
         else:
             response = b"HTTP/1.1 404 Not Found\r\n\r\n"
             
