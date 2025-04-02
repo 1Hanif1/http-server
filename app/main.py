@@ -30,7 +30,7 @@ def main():
             string = path.split("/")[2]
             response = build_response(200, "text/plain", string)
         elif path.startswith("/user-agent"):
-            request_line = request.split("\n")[2]  # First line of request
+            request_line = request.split("\n")[2]  # Third line of request
             user_agent = request_line.split(": ")[1].strip()
             response = build_response(200, "text/plain", user_agent)
         else:
