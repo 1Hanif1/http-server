@@ -2,6 +2,7 @@ import socket  # noqa: F401
 import threading  # noqa: F401
 import os  # noqa: F401
 import argparse  # noqa: F401
+
 def build_response(status_code, content_type, body):
     """
     Build an HTTP response.
@@ -12,7 +13,42 @@ def build_response(status_code, content_type, body):
     """
     return f"HTTP/1.1 {status_code} OK\r\nContent-Type: {content_type}\r\nContent-Length: {len(body.encode())}\r\n\r\n{body}".encode()
 
-def handle_request(path, request, directory="."):
+def get_user_agent(request):
+    """
+    Extract the User-Agent from the HTTP request.
+    :param request: HTTP request string
+    :return: User-Agent string
+    """
+    request_line = request.split("\n")[2]  # Third line of request
+    user_agent = request_line.split(": ")[1].strip()
+    response = build_response(200, "text/plain", user_agent)
+    return response
+
+def get_file_content(file_path):
+    """
+    Read the content of a file.
+    :param file_path: Path to the file
+    :return: File content as bytes
+    """
+
+    # Check if the file exists
+    if os.path.isfile(file_path):  
+        try:
+            # Open the file in binary mode
+            with open(file_path, "rb") as file:  
+                content = file.read()
+
+            response = build_response(
+                200, "application/octet-stream", content.decode()
+            )
+
+        except Exception as e:
+            response = b"HTTP/1.1 500 Internal Server Error\r\n\r\n"
+
+    else:
+        response = b"HTTP/1.1 404 Not Found\r\n\r\n"
+
+def handle_get_request(path, request, directory="."):
     if path == "/":
         response = b"HTTP/1.1 200 OK\r\n\r\n"
     
@@ -21,45 +57,44 @@ def handle_request(path, request, directory="."):
         response = build_response(200, "text/plain", string)
     
     elif path.startswith("/user-agent"):
-        request_line = request.split("\n")[2]  # Third line of request
-        user_agent = request_line.split(": ")[1].strip()
-        response = build_response(200, "text/plain", user_agent)
+        response = get_user_agent(request)
     
     elif path.startswith("/files/"):
         filename = path.split("/")[2] if len(path.split("/")) > 2 else ""
-        
+    
         # Join directory + filename
         file_path = os.path.join(directory, filename)  
-            # Ensure directory is absolute
-        directory = os.path.abspath(directory)
-        file_path = os.path.join(directory, filename)
+        response = get_file_content(file_path)
 
-
-        # Check if the file exists
-        if os.path.isfile(file_path):  
-            try:
-                # Open the file in binary mode
-                with open(file_path, "rb") as file:  
-                    content = file.read()
-
-                response = build_response(
-                    200, "application/octet-stream", content.decode()
-                )
-
-            except Exception as e:
-                response = b"HTTP/1.1 500 Internal Server Error\r\n\r\n"
-        
-        else:
-            response = b"HTTP/1.1 404 Not Found\r\n\r\n"
-    
     else:
         response = b"HTTP/1.1 404 Not Found\r\n\r\n"
     
     return response
 
+def handle_post_request(path, request, directory="."):
+    if path == "/":
+        response = b"HTTP/1.1 200 OK\r\n\r\n"
+    elif path.startswith("/files/"):
+        filename = path.split("/")[2] if len(path.split("/")) > 2 else ""
+        file_path = os.path.join(directory, filename)  
+        
+        # Extract the body from the request
+        body = request.split("\r\n\r\n")[1]  
+        
+        # Write the body to the file
+        with open(file_path, "wb") as file:  
+            file.write(body.encode())
+        
+        response = build_response(200, "text/plain", "File created successfully")
+    else:
+        response = b"HTTP/1.1 404 Not Found\r\n\r\n"
+
+    return response
+
 def handle_client(conn, directory="."):
     """Handles a single client request"""
     request = conn.recv(1024).decode()
+    print(f"Received request:\n{request}")  # Print the received request
     # Extract the requested file path
     request_line = request.split("\n")[0]  
     
@@ -67,12 +102,15 @@ def handle_client(conn, directory="."):
     method, path, _ = request_line.split(" ")  
     
     # Extract method and path
-    if method != "GET":
-        response = b"HTTP/1.1 405 Method Not Allowed\r\n\r\n"
-    else: 
-        # Call the function to handle the request (We assume it is a GET request)
-        response = handle_request(path, request, directory)
-    conn.sendall(response) # Send the response back to the client
+    if method == "GET":
+        response = handle_get_request(path, request, directory)
+    elif method == "POST":
+        response = handle_post_request(path, request, directory)
+    else:
+        response = b"HTTP/1.1 405 Method Not Allowed\r\n\r\n" 
+
+    # Send the response back to the client
+    conn.sendall(response) 
     conn.close()
 
 def main():
