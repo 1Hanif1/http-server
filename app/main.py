@@ -2,7 +2,7 @@ import socket  # noqa: F401
 import threading  # noqa: F401
 import os  # noqa: F401
 import argparse  # noqa: F401
-import zlib
+import gzip
 
 def build_compressed_response(status_code, content_type, encoding_type, body, body_length):
     return f"HTTP/1.1 {status_code} OK\r\nContent-Encoding: {encoding_type}\r\nContent-Type: {content_type}\r\nContent-Length: {body_length}\r\n\r\n{body}".encode()
@@ -82,7 +82,8 @@ def handle_get_request(path, request, directory="."):
 
         if accept_encoding == "gzip":
             # If gzip is requested, compress the string
-            compressed_string = zlib.compress(string.encode())
+            compressed_string = gzip.compress(string.encode())
+            print(compressed_string)  # Print the compressed string for debugging
             response = build_compressed_response(200, "text/plain", accept_encoding, compressed_string, len(str(compressed_string)))
         else:
             response = build_response(200, "text/plain", string)
