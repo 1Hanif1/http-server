@@ -70,8 +70,10 @@ def handle_get_request(path, request, directory="."):
                 break
         
         print(f"Accept-Encoding: {accept_encoding}")  # Print the Accept-Encoding header for debugging
+        encoders = accept_encoding.split(",") if accept_encoding else []
 
-        for enc in accept_encoding.split(","):
+        # Check if gzip is in the Accept-Encoding header
+        for enc in encoders:
             if enc.strip() == "gzip":
                 accept_encoding = "gzip"
                 break
