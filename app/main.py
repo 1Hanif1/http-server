@@ -2,6 +2,10 @@ import socket  # noqa: F401
 import threading  # noqa: F401
 import os  # noqa: F401
 import argparse  # noqa: F401
+import zlib
+
+def build_compressed_response(status_code, content_type, encoding_type, body, body_length):
+    return f"HTTP/1.1 {status_code} OK\r\nContent-Encoding: {encoding_type}\r\nContent-Type: {content_type}\r\nContent-Length: {body_length}\r\n\r\n{body}".encode()
 
 def build_response(status_code, content_type, body):
     """
@@ -56,7 +60,22 @@ def handle_get_request(path, request, directory="."):
     
     elif path.startswith("/echo/"):
         string = string = path.split("/")[2] if len(path.split("/")) > 2 else ""
-        response = build_response(200, "text/plain", string)
+        # print(request)  # Print the request for debugging
+        request_headers = request.split("\r\n")
+        
+        accept_encoding = None
+        for header in request_headers:
+            if header.startswith("Accept-Encoding:"):
+                accept_encoding = header.split(":")[1].strip()
+                break
+        
+        print(f"Accept-Encoding: {accept_encoding}")  # Print the Accept-Encoding header for debugging
+        if accept_encoding == "gzip":
+            # If gzip is requested, compress the string
+            compressed_string = zlib.compress(string.encode())
+            response = build_compressed_response(200, "text/plain", accept_encoding, compressed_string, len(str(compressed_string)))
+        else:
+            response = build_response(200, "text/plain", string)
     
     elif path.startswith("/user-agent"):
         response = get_user_agent(request)
@@ -96,7 +115,7 @@ def handle_post_request(path, request, directory="."):
 def handle_client(conn, directory="."):
     """Handles a single client request"""
     request = conn.recv(1024).decode()
-    print(f"Received request:\n{request}")  # Print the received request
+    # print(f"Received request:\n{request}")  # Print the received request
     # Extract the requested file path
     request_line = request.split("\n")[0]  
     
@@ -129,7 +148,7 @@ def main():
     
     while True:
         conn, addr = server_socket.accept()
-        print(f"Accepted connection from {addr}")
+        # print(f"Accepted connection from {addr}")
         # Handle the client in a new thread
         client_thread = threading.Thread(target=handle_client, args=(conn, args.directory))
         client_thread.start()
