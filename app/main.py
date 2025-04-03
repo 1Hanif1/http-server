@@ -66,10 +66,18 @@ def handle_get_request(path, request, directory="."):
         accept_encoding = None
         for header in request_headers:
             if header.startswith("Accept-Encoding:"):
-                accept_encoding = header.split(":")[1].strip()
+                accept_encoding = header.split(": ")[1]
                 break
         
         print(f"Accept-Encoding: {accept_encoding}")  # Print the Accept-Encoding header for debugging
+
+        for enc in accept_encoding.split(","):
+            if enc.strip() == "gzip":
+                accept_encoding = "gzip"
+                break
+            else:
+                accept_encoding = None
+
         if accept_encoding == "gzip":
             # If gzip is requested, compress the string
             compressed_string = zlib.compress(string.encode())
